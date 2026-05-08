@@ -43,7 +43,7 @@ OUTPUT_FILE = 1
 #   ∧ ∀p. p ≠ OUTPUT_FILE → Select(fs_final, p) = Select(fs_initial, p)
 #                                                                  [nothing else changed]
 #
-# TODO: Encode this as a Z3 validity check and verify it.
+# Encode this as a Z3 validity check and verify it.
 # ============================================================================
 
 def verify_correct_composition():
@@ -76,17 +76,20 @@ def verify_correct_composition():
                             Select(fs_final, p) == Select(fs_initial, p)))
     )
 
-    # TODO: Check that (skill_A_post ∧ skill_B_post) → composed_post is valid.
+    # Check that (skill_A_post ∧ skill_B_post) → composed_post is valid.
     # That is, check that the negation is UNSAT.
     s = Solver()
-    # s.add(skill_A_post)
-    # s.add(skill_B_post)
-    # s.add(Not(composed_post))
+    s.add(skill_A_post)
+    s.add(skill_B_post)
+    s.add(Not(composed_post))
 
-    # TODO: uncomment and check
-    # result = s.check()
+    # uncomment and check
+    result = s.check()
 
-    print("  TODO: Implement verification")
+    if result == unsat:
+        print("VERIFIED: composed postcondition holds")
+    else:
+        print(f"FAILED: with counterexample {s.model()}")
     print()
 
 
@@ -101,7 +104,7 @@ def verify_correct_composition():
 #
 # The composed postcondition should FAIL because the input file is modified.
 #
-# TODO: Encode this and show the counterexample.
+# Encode this and show the counterexample.
 # ============================================================================
 
 def verify_buggy_composition():
@@ -130,12 +133,20 @@ def verify_buggy_composition():
                             Select(fs_final, p) == Select(fs_initial, p)))
     )
 
-    # TODO: Check that the composed postcondition FAILS.
+    # Check that the composed postcondition FAILS.
     # Print the counterexample showing how the input file gets corrupted.
     s = Solver()
     # s.add(...)
+    s.add(skill_A_post)
+    s.add(buggy_B_post)
+    s.add(Not(composed_post))
 
-    print("  TODO: Implement buggy verification")
+    result = s.check()
+
+    if result == sat:
+        print(f"FAILED: bug caught as expected, counterexample shows input file corrupted {s.model()}")
+    else:
+        print(f"VERIFIED: something wrong, bug not caught")
     print()
 
 
@@ -148,8 +159,19 @@ def verify_buggy_composition():
 # Cursor, Copilot, etc.) or from what you learned in class. What would a runtime monitor need to check to
 # prevent this class of bugs?
 
-# TODO: Write your explanation here as a comment.
+# Write your explanation here as a comment.
 # ...
+# I haven't had this experience because I don't typically have coding agents directly modify files for me.
+# I asked my friend who uses coding agent more frequently than I do, and she said she also hasn't had this experience,
+# because she typically uses the coding agent to create files rather than modify existing files.
+# Therefore I asked Claude to help me brainstorm, and it told me that a common failure mode in coding agents is
+# when one skill reads a config file to extract settings, and a second skill writes results to an output file but
+# accidentally uses the wrong path variable, and overwrites the original config file instead. Personally I have never
+# heard of an agent mixing up path variables, however I think the gist is that two skills are trying to coordinate but
+# there is some miscommunication between the skills causing one to write to the wrong path and overwrite important
+# information, and I suppose that sounds plausible to me. A runtime monitor could prevent this by tracking all paths
+# read during the workflow and treating them as read-only for subsequent skills, preventing later skills from writing to
+# a path that was previously used as input.
 # ============================================================================
 
 

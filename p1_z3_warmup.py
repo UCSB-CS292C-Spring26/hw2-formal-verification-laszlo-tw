@@ -15,8 +15,11 @@ def part_a():
     x, y, z = Ints('x y z')
     s = Solver()
 
-    # TODO: Add constraints
     # s.add(...)
+    s.add(x + 2*y == z)
+    s.add(z > 10)
+    s.add(x > 0)
+    s.add(y > 0)
 
     print("=== Part (a) ===")
     if s.check() == sat:
@@ -36,8 +39,10 @@ def part_b():
     x = Int('x')
     s = Solver()
 
-    # TODO: Add the *negation* of the formula and check UNSAT
     # s.add(...)
+    # negate the implication rule
+    s.add(x > 5)
+    s.add(Not(x > 3))
 
     print("=== Part (b) ===")
     result = s.check()
@@ -67,8 +72,10 @@ def part_c():
     f = Function('f', S, S)
     s = Solver()
 
-    # TODO: Add the three constraints
     # s.add(...)
+    s.add(f(f(x)) == x)
+    s.add(f(f(f(x))) == x)
+    s.add(f(x) != x)
 
     print("=== Part (c) ===")
     result = s.check()
@@ -76,7 +83,36 @@ def part_c():
         print(f"SAT: {s.model()}")
     else:
         print("UNSAT")
-    # TODO: Add Z3 derivation steps below (see STEP 2 above).
+
+    # first of all, IF f(f(x)) = x, THEN f(f(f(x))) = f(x), but we already said f(f(f(x))) = x
+    # separately, IF f(f(x)) = x AND f(f(f(x))) = x, THEN f(f(x)) = f(f(f(x))) SO x = f(x)
+    
+    # f(f(x)) = x  alone implies f(f(f(x))) = f(x)
+    s1 = Solver()
+    s1.add(f(f(x)) == x)            # given
+    s1.add(f(f(f(x))) != f(x))      # negate my claim: 
+                                    # if z3 can satisfy the negation, i'm wrong!
+                                    # but if z3 returns unsat, then my claim is right!
+    r1 = s1.check()
+    if r1 == unsat:
+        print("UNSAT: f(f(x)) == f(x) and not f(f(f(x))) == f(x)\n \
+        (in other words, UNSAT: not (f(f(x) == f(x) implies f(f(f(x))) == f(x)))\n \
+        therefore, f(f(x)) = x  alone implies f(f(f(x))) = f(x).\n \
+        (however, we are also given that f(f(f(x))) = x.\n\
+        therefore, by the transitive property, f(x) = x, contradicting the formula)")
+
+    # f(f(x)) = x and f(f(f(x))) = x means f(f(x)) = f(f(f(x))), implying x = f(x) 
+    s2 = Solver()
+    s2.add(f(f(x)) == x)            # given
+    s2.add(f(f(f(x))) == x)         # given
+    s2.add(f(x) != x)               # negate my claim
+    r2 = s2.check()
+    if r2 == unsat:
+        print("UNSAT: f(f(x)) == x and f(f(f(x))) == x and not f(x) == x\n\
+        (in other words, UNSAT: not ((f(f(x)) == x and f(f(f(x))) == x) implies f(x) == x))\n\
+        therefore, f(f(x)) = x and f(f(f(x))) = x together implies x = f(x).\n\
+        (because f(f(x)) = f(f(f(x))), which simplifies to x = f(x))")
+
     print()
 
 
@@ -98,19 +134,37 @@ def part_d():
 
     # Axiom 1: Read-over-write HIT
     s1 = Solver()
-    # TODO: Negate axiom 1 and check UNSAT
     # s1.add(...)
+
+    # axiom 1: i = j  →  Select(Store(a, i, v), j) = v
+    # negation: i = j AND Select(Store(a, i, v), j) ≠ v
+    s1.add(i == j)
+    s1.add(Select(Store(a, i, v), j) != v)
+
     r1 = s1.check()
     print(f"Axiom 1 (hit):  {'Valid' if r1 == unsat else 'INVALID'}")
 
     # Axiom 2: Read-over-write MISS
     s2 = Solver()
-    # TODO: Negate axiom 2 and check UNSAT
     # s2.add(...)
+
+    # axiom 1: i ≠ j  →  Select(Store(a, i, v), j) = Select(a, j)
+    # negation: i ≠ j  and  Select(Store(a, i, v), j) ≠ Select(a, j)
+    s2.add(i != j)
+    s2.add(Select(Store(a, i, v), j) != Select(a, j))
+
     r2 = s2.check()
     print(f"Axiom 2 (miss): {'Valid' if r2 == unsat else 'INVALID'}")
     print()
 
+    # [Explain]: Every read after write has exactly two cases. You're either reading 
+    # the element you just wrote (in which case you should get the updated value, v), 
+    # or you are reading a different element (in which case you should get the value 
+    # held by that element prior to the write, unchanged). In other words, either
+    # i == j or i != j. These are two distinct cases, covered by axioms 1 and 2 
+    # respectively, and there are no other possible cases. Therefore, the two axioms
+    # fully characterize Store/Select behavior.
+    # (I had Claude explain this to me first because I didn't really understand it.)
 
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
